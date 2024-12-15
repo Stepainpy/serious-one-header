@@ -94,9 +94,8 @@ uint64_t xorshift64s(void) {
     x ^= x >> 12;
     x ^= x << 25;
     x ^= x >> 27;
-    x *= UINT64_C(2685821657736338717);
     (void)xorshift64s_state(x);
-    return x;
+    return x * UINT64_C(2685821657736338717);
 }
 
 #else
@@ -122,8 +121,8 @@ uint64_t xorshift64s(xorshift64s_state * const state) {
     x ^= x >> 12;
     x ^= x << 25;
     x ^= x >> 27;
-    x *= UINT64_C(2685821657736338717);
-    return state->state = x;
+    state->state = x;
+    return x * UINT64_C(2685821657736338717);
 }
 
 #endif // XORSHIFT_STATIC_STATE
