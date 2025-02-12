@@ -30,6 +30,7 @@ extern "C" {
 typedef struct { uint8_t value[32]; } sha256_hash_t;
 
 SHA256_DEF sha256_hash_t sha256(const void* source, size_t count);
+SHA256_DEF sha256_hash_t sha256_file(FILE* file);
 SHA256_DEF void sha256_put_hash(const sha256_hash_t* hash, FILE* file);
 
 #ifdef __cplusplus
@@ -42,28 +43,6 @@ SHA256_DEF void sha256_put_hash(const sha256_hash_t* hash, FILE* file);
 
 #include <stdbool.h>
 #include <string.h>
-
-void sha256_put_hash(const sha256_hash_t* hash, FILE* file) {
-    for (size_t i = 0; i < 32; i++)
-        fprintf(file, "%02hhx", hash->value[i]);
-}
-
-uint64_t sha256_d_le2be_u64_(uint64_t n) {
-    n = (n & 0xffffffff00000000) >> 32 | (n & 0x00000000ffffffff) << 32;
-    n = (n & 0xffff0000ffff0000) >> 16 | (n & 0x0000ffff0000ffff) << 16;
-    n = (n & 0xff00ff00ff00ff00) >>  8 | (n & 0x00ff00ff00ff00ff) <<  8;
-    return n;
-}
-
-uint32_t sha256_d_le2be_u32_(uint32_t n) {
-    n = (n & 0xffff0000) >> 16 | (n & 0x0000ffff) << 16;
-    n = (n & 0xff00ff00) >>  8 | (n & 0x00ff00ff) <<  8;
-    return n;
-}
-
-uint32_t sha256_d_rotr_u32(uint32_t n, uint8_t shift) {
-    return n >> shift | n << (32 - shift);
-}
 
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 #define sha256_d_le2be_u64 sha256_d_le2be_u64_
@@ -92,37 +71,63 @@ const uint32_t sha256_d_k[64] = {
     0x90BEFFFA, 0xA4506CEB, 0xBEF9A3F7, 0xC67178F2
 };
 
-sha256_hash_t sha256(const void* source, size_t count) {
-    const size_t count_bits = count * 8;
+uint64_t sha256_d_le2be_u64_(uint64_t n) {
+    n = (n & 0xffffffff00000000) >> 32 | (n & 0x00000000ffffffff) << 32;
+    n = (n & 0xffff0000ffff0000) >> 16 | (n & 0x0000ffff0000ffff) << 16;
+    n = (n & 0xff00ff00ff00ff00) >>  8 | (n & 0x00ff00ff00ff00ff) <<  8;
+    return n;
+}
+
+uint32_t sha256_d_le2be_u32_(uint32_t n) {
+    n = (n & 0xffff0000) >> 16 | (n & 0x0000ffff) << 16;
+    n = (n & 0xff00ff00) >>  8 | (n & 0x00ff00ff) <<  8;
+    return n;
+}
+
+uint32_t sha256_d_rotr_u32(uint32_t n, uint8_t shift) {
+    return n >> shift | n << (32 - shift);
+}
+
+size_t sha256_d_get_block(void* dbuf, size_t dbufe_sz, void** dof, size_t* count) {
+    if (*count == (size_t)-1) { // 'dof' is file
+        return fread(dbuf, 1, dbufe_sz, (FILE*)*dof);
+    } else if (*count >= dbufe_sz) {
+        memcpy(dbuf, *dof, dbufe_sz);
+        *dof = (uint8_t*)*dof + dbufe_sz;
+        *count -= dbufe_sz;
+        return dbufe_sz;
+    } else {
+        memcpy(dbuf, *dof, *count);
+        size_t readed = *count;
+        *count = 0;
+        return readed;
+    }
+}
+
+sha256_hash_t sha256_d_base(void* source, size_t count) {
     bool has_next_block     = true;
     bool need_paste_one_bit = true;
+    size_t all_readed = 0;
 
     uint32_t hi[8] = {
         0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A,
         0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19
     };
 
-    while (count > 0 || has_next_block) {
+    while ((count > 0 && count != (size_t)-1) || has_next_block) {
         uint32_t w[64] = {0};
 
-        uint64_t* chunk = (uint64_t*)w; // as u64[8]
-        if (count >= 64) {
-            memcpy(chunk, source, 64);
-            source = (uint8_t*)source + 64;
-            count -= 64;
-        } else if (count < 64 && count > 0) {
-            memcpy(chunk, source, count);
-            *((uint8_t*)chunk + count) = 0x80;
+        uint8_t* chunk = (uint8_t*)w; // as u64[8]
+        size_t readed = sha256_d_get_block(chunk, 64, &source, &count);
+        all_readed += readed;
+
+        if (readed < 64 && need_paste_one_bit) {
+            *(chunk + readed) = 0x80;
             need_paste_one_bit = false;
-            if (count <= 55) {
-                chunk[7] = sha256_d_le2be_u64(count_bits);
-                has_next_block = false;
-            }
-            count = 0;
-        } else {
-            if (need_paste_one_bit)
-                *(uint8_t*)chunk = 0x80;
-            chunk[7] = sha256_d_le2be_u64(count_bits);
+        }
+        if (readed < 56) {
+            *(uint64_t*)(chunk + 56) = // write to last u64
+                sha256_d_le2be_u64(all_readed * 8);
             has_next_block = false;
         }
 
@@ -167,6 +172,19 @@ sha256_hash_t sha256(const void* source, size_t count) {
         hi[i] = sha256_d_le2be_u32(hi[i]);
     memcpy(out.value, hi, sizeof out);
     return out;
+}
+
+sha256_hash_t sha256(const void* source, size_t count) {
+    return sha256_d_base((void*)source, count);
+}
+
+sha256_hash_t sha256_file(FILE* file) {
+    return sha256_d_base(file, -1);
+}
+
+void sha256_put_hash(const sha256_hash_t* hash, FILE* file) {
+    for (size_t i = 0; i < 32; i++)
+        fprintf(file, "%02hhx", hash->value[i]);
 }
 
 #endif // SHA256_IMPLEMENTATION
