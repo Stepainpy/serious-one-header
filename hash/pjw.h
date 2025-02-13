@@ -31,7 +31,7 @@ uint32_t pjw_32(const void* source, size_t count) {
     uint32_t out = 0, high;
     while (count --> 0) {
         out = (out << 4) + *data++;
-        if ((high = 0xF0000000 & out) != 0) {
+        if ((high = UINT32_C(0xF0000000) & out) != 0) {
             out ^= high >> 24;
             out &= ~high;
         }
@@ -44,7 +44,7 @@ uint64_t pjw_64(const void* source, size_t count) {
     uint64_t out = 0, high;
     while (count --> 0) {
         out = (out << 8) + *data++;
-        if ((high = 0xFF00000000000000 & out) != 0) {
+        if ((high = UINT64_C(0xFF00000000000000) & out) != 0) {
             out ^= high >> 48;
             out &= ~high;
         }
@@ -57,7 +57,7 @@ uint32_t pjw_32_file(FILE* file) {
     uint32_t out = 0, high;
     while ((ch = fgetc(file)) != EOF) {
         out = (out << 4) + (uint8_t)ch;
-        if ((high = 0xF0000000 & out) != 0) {
+        if ((high = UINT32_C(0xF0000000) & out) != 0) {
             out ^= high >> 24;
             out &= ~high;
         }
@@ -70,7 +70,7 @@ uint64_t pjw_64_file(FILE* file) {
     uint64_t out = 0, high;
     while ((ch = fgetc(file)) != EOF) {
         out = (out << 8) + (uint8_t)ch;
-        if ((high = 0xFF00000000000000 & out) != 0) {
+        if ((high = UINT64_C(0xFF00000000000000) & out) != 0) {
             out ^= high >> 48;
             out &= ~high;
         }
