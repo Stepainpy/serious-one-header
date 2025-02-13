@@ -21,11 +21,8 @@ uint32_t xorshift32_state(uint32_t seed);
 uint64_t xorshift64_state(uint64_t seed);
 uint64_t xorshift64s_state(uint64_t seed);
 
-// xorshift 32-bit
 uint32_t xorshift32(void);
-// xorshift 64-bit
 uint64_t xorshift64(void);
-// xorshift* 64-bit
 uint64_t xorshift64s(void);
 
 #else
@@ -34,11 +31,8 @@ typedef struct { uint32_t state; } xorshift32_state;
 typedef struct { uint64_t state; } xorshift64_state;
 typedef struct { uint64_t state; } xorshift64s_state;
 
-// xorshift 32-bit
 uint32_t xorshift32(xorshift32_state * const state);
-// xorshift 64-bit
 uint64_t xorshift64(xorshift64_state * const state);
-// xorshift* 64-bit
 uint64_t xorshift64s(xorshift64s_state * const state);
 
 #endif // XORSHIFT_STATIC_STATE
