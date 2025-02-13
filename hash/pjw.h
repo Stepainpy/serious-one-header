@@ -8,11 +8,19 @@
 #define PJW_DEF
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 PJW_DEF uint32_t pjw_32(const void* source, size_t count);
 PJW_DEF uint64_t pjw_64(const void* source, size_t count);
 
 PJW_DEF uint32_t pjw_32_file(FILE* file);
 PJW_DEF uint64_t pjw_64_file(FILE* file);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // PJW_H
 
