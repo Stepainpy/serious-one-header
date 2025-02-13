@@ -17,7 +17,7 @@ typedef struct {
     uint64_t high;
 } siphash_key_t;
 
-SIPHASH_DEF uint64_t siphash_base(
+SIPHASH_DEF uint64_t siphash(
     size_t c, size_t d, siphash_key_t key,
     const void* source, size_t count
 );
@@ -59,10 +59,10 @@ void sipround(
 }
 
 uint64_t siphash_2_4(siphash_key_t key, const void* src, size_t cnt) {
-    return siphash_base(2, 4, key, src, cnt);
+    return siphash(2, 4, key, src, cnt);
 }
 
-uint64_t siphash_base(
+uint64_t siphash(
     size_t c, size_t d, siphash_key_t key,
     const void* source, size_t count
 ) {
@@ -70,10 +70,10 @@ uint64_t siphash_base(
     const uint64_t put_size = count & 255;
     bool has_next_block = true;
 
-    uint64_t v0 = key.low  ^ 0x736f6d6570736575;
-    uint64_t v1 = key.high ^ 0x646f72616e646f6d;
-    uint64_t v2 = key.low  ^ 0x6c7967656e657261;
-    uint64_t v3 = key.high ^ 0x7465646279746573;
+    uint64_t v0 = key.low  ^ UINT64_C(0x736f6d6570736575);
+    uint64_t v1 = key.high ^ UINT64_C(0x646f72616e646f6d);
+    uint64_t v2 = key.low  ^ UINT64_C(0x6c7967656e657261);
+    uint64_t v3 = key.high ^ UINT64_C(0x7465646279746573);
 
     while (count > 0 || has_next_block) {
         uint64_t mi = 0;
