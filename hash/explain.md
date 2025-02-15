@@ -84,9 +84,9 @@ SipHash-*c*-*d* function:
     u64 v2 := k0 ^ 0x6c7967656e657261
     u64 v3 := k1 ^ 0x7465646279746573
 
-    <b><i>const</i></b> u64[] blocks := message || <i>padding with zero bytes length = </i>(7 - |message| % 8) || |message| % 256
     <i><b>comment:</b> last block (0-7 bytes) contains length of message by modulo 256 in higher byte</i>
     <i><b>comment:</b> as example: last and only one block for message 'AB' equal 0x0200000000004241</i>
+    <b><i>const</i></b> u64[] blocks := message || 7 - |message| % 8 <i>zero bytes</i> || |message| % 256
 
     <b><i>for-each</i></b> block <b><i>in</i></b> blocks <b><i>do</i></b>
         v3 ^= block
